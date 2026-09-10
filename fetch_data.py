@@ -1,333 +1,56 @@
-<!DOCTYPE html>
-<html lang="ko">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>식약처 규제·안전 모니터링 대시보드</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <style>
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: #F8F7F4; }
-    .card-shadow { box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03); }
-    .clickable-card { transition: all 0.2s ease-in-out; cursor: pointer; }
-    .clickable-card:hover { transform: translateY(-2px); box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); border-color: #cbd5e1; }
-  </style>
-</head>
-<body class="text-slate-800 min-h-screen p-4 md:p-8">
+import os
+import json
+import urllib.parse
+import requests
 
-  <div class="w-full mx-auto space-y-6">
-    <div class="flex items-center text-sm text-slate-500 space-x-2 font-medium tracking-wide">
-      <span>식약처 모니터링 시스템</span><span>•</span><span>매일 06:00 자동 수집</span><span>•</span>
-      <span>마지막 업데이트 <span id="lastUpdateTime" class="text-slate-700">확인 중...</span></span>
-    </div>
+ENCODED_KEY = "UeUGCJBDne0mX4NRwLK6TCdYTL99EzScvgxb0ai3l5d0M5YIO3YriZo%2FMiH1Amq9vL13f%2F9TtMyVcInZQf%2FsfQ%3D%3D"
+API_KEY = urllib.parse.unquote(ENCODED_KEY)
 
-    <div class="flex border-b border-slate-200 mt-2 space-x-8 text-lg font-bold">
-      <button id="tabSanctions" onclick="switchTab('sanctions')" class="pb-3 border-b-4 border-blue-600 text-blue-600 transition">📊 의약품 행정처분</button>
-      <button id="tabSafeLetters" onclick="switchTab('safeLetters')" class="pb-3 border-b-4 border-transparent text-slate-500 hover:text-slate-800 transition">📢 의약품 안전성 서한</button>
-    </div>
-
-    <!-- ==================== 행정처분 화면 ==================== -->
-    <div id="viewSanctions" class="space-y-6">
-      <div class="bg-white rounded-xl p-4 flex flex-wrap items-center justify-between card-shadow border border-slate-100">
-        <button onclick="setFilter('')" class="px-5 py-2 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-full text-base font-bold hover:bg-emerald-100 transition">
-          전체 수집 <span id="badgeTotal">0</span>
-        </button>
-        <button onclick="location.reload()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 rounded-lg text-base font-medium transition">↻ 새로고침</button>
-      </div>
-
-      <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div class="bg-white p-8 rounded-xl card-shadow border border-slate-100 lg:col-span-1 flex flex-col">
-          <h2 class="text-xl font-bold mb-2">처분 유형 구성</h2>
-          <div class="relative flex-grow flex items-center justify-center min-h-[300px]">
-            <canvas id="typeDonutChart"></canvas>
-            <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none mt-2">
-              <span class="text-4xl font-black text-slate-700" id="donutCenterTotal">0</span>
-              <span class="text-sm text-slate-500 font-medium mt-1">총 처분</span>
-            </div>
-          </div>
-        </div>
-        <div class="bg-white p-8 rounded-xl card-shadow border border-slate-100 lg:col-span-2 flex flex-col">
-          <h2 class="text-xl font-bold mb-2">연도별 처분 건수</h2>
-          <div class="flex-grow min-h-[300px]">
-            <canvas id="yearBarChart"></canvas>
-          </div>
-        </div>
-      </div>
-
-      <!-- 요약 카드 6칸 -->
-      <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-        <div onclick="setFilter('')" class="bg-white p-5 rounded-xl card-shadow border border-slate-100 clickable-card">
-          <div class="text-sm text-slate-500 font-bold mb-1">📊 전체 처분</div><div class="text-3xl font-black text-slate-800" id="cardTotal">0</div>
-        </div>
-        <div onclick="setFilter(new Date().getFullYear().toString())" class="bg-white p-5 rounded-xl card-shadow border border-slate-100 clickable-card">
-          <div class="text-sm text-emerald-600 font-bold mb-1">📅 올해 처분</div><div class="text-3xl font-black text-slate-800" id="cardThisYear">0</div>
-        </div>
-        <div onclick="setFilter('취소')" class="bg-white p-5 rounded-xl card-shadow border-t-4 border-t-[#DE5A5A] clickable-card">
-          <div class="text-sm text-[#DE5A5A] font-bold mb-1">❌ 허가취소</div><div class="text-3xl font-black text-slate-800" id="cardCancel">0</div>
-        </div>
-        <div onclick="setFilter('정지')" class="bg-white p-5 rounded-xl card-shadow border-t-4 border-t-[#B48A44] clickable-card">
-          <div class="text-sm text-[#B48A44] font-bold mb-1">⏸️ 업무정지</div><div class="text-3xl font-black text-slate-800" id="cardSuspend">0</div>
-        </div>
-        <div onclick="setFilter('과징금')" class="bg-white p-5 rounded-xl card-shadow border-t-4 border-t-[#4574D8] clickable-card">
-          <div class="text-sm text-[#4574D8] font-bold mb-1">💰 과징금</div><div class="text-3xl font-black text-slate-800" id="cardFine">0</div>
-        </div>
-        <div onclick="setFilter('경고')" class="bg-white p-5 rounded-xl card-shadow border-t-4 border-t-[#709E45] clickable-card">
-          <div class="text-sm text-[#709E45] font-bold mb-1">⚠️ 경고</div><div class="text-3xl font-black text-slate-800" id="cardWarn">0</div>
-        </div>
-      </div>
-
-      <div class="bg-white rounded-xl border border-slate-200 card-shadow overflow-hidden mt-8" id="sanctionsTableSection">
-        <div class="p-5 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
-          <h3 class="text-lg font-bold text-slate-700">상세 처분 목록</h3>
-          <input type="text" id="searchSanctions" onkeyup="renderSanctionsTable()" placeholder="검색어 입력..." class="px-4 py-2 border rounded-lg text-base w-80 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm">
-        </div>
-        <div class="overflow-x-auto h-[800px] overflow-y-auto">
-          <table class="w-full text-left border-collapse text-base">
-            <thead class="bg-white text-slate-600 text-sm uppercase font-bold sticky top-0 shadow-sm">
-              <tr><th class="p-5 whitespace-nowrap">처분일자</th><th class="p-5 whitespace-nowrap">업체명</th><th class="p-5 w-1/4">제품명</th><th class="p-5 w-1/2">처분/위반 내용</th></tr>
-            </thead>
-            <tbody id="sanctionsBody" class="divide-y divide-slate-100"></tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-
-    <!-- ==================== 안전성서한 화면 ==================== -->
-    <div id="viewSafeLetters" class="hidden space-y-6">
-      <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between mt-4">
-        <div>
-          <span class="text-sm font-semibold text-blue-500 uppercase tracking-wider">최근 수집된 안전성서한</span>
-          <div class="text-3xl font-bold mt-2" id="countSafeLetters">0건</div>
-        </div>
-        <div class="w-14 h-14 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center font-bold text-2xl">📢</div>
-      </div>
-      <div class="bg-white rounded-xl border border-slate-200 card-shadow overflow-hidden">
-        <div class="p-5 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
-          <h3 class="text-lg font-bold text-slate-700">안전성 서한 목록</h3>
-          <input type="text" id="searchLetters" onkeyup="renderLettersTable()" placeholder="검색어 입력..." class="px-4 py-2 border rounded-lg text-base w-80 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm">
-        </div>
-        <div class="overflow-x-auto h-[800px] overflow-y-auto">
-          <table class="w-full text-left border-collapse text-base">
-            <thead class="bg-white text-slate-600 text-sm uppercase font-bold sticky top-0 shadow-sm">
-              <tr><th class="p-5 whitespace-nowrap">배포일자</th><th class="p-5 w-1/3">서한 제목</th><th class="p-5">대상 성분</th><th class="p-5 w-1/3">주요 내용</th></tr>
-            </thead>
-            <tbody id="safeLettersBody" class="divide-y divide-slate-100"></tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <script>
-    let rawSanctions = [];
-    let rawSafeLetters = [];
-    let donutChartInstance = null;
-    let barChartInstance = null;
-
-    function extractDateFallback(item) {
-      const upperItem = {};
-      for (let k in item) { if (item.hasOwnProperty(k)) upperItem[k.toUpperCase()] = item[k]; }
-      
-      for (let key of ['ADM_DISPO_YMD', 'DISP_DT', 'EXCPT_NOTIC_DT', 'DISPO_DT', 'YMD', 'PBLNT_DATE', 'NOTICE_DATE']) {
-        let val = upperItem[key];
-        if (val) return val;
-      }
-      
-      const jsonStr = JSON.stringify(item);
-      const match = jsonStr.match(/(20[1-2]\d)[-./\s]?(0[1-9]|1[0-2])[-./\s]?(0[1-9]|[1-2]\d|3[0-1])/);
-      if (match) return `${match[1]}-${match[2]}-${match[3]}`;
-      return '-';
-    }
-
-    function getVal(item, keys, isContent = false) {
-      const upperItem = {};
-      for (let k in item) { if (item.hasOwnProperty(k)) upperItem[k.toUpperCase()] = item[k]; }
-      
-      for (let key of keys) {
-        let val = upperItem[key.toUpperCase()];
-        if (val !== undefined && val !== null && val !== "") return val;
-      }
-      
-      if (isContent) {
-        let fallback = [];
-        const extractedDate = extractDateFallback(item);
-        for (let k in upperItem) {
-          if (!['ENTP_NAME', 'ENTRPS_NM', 'ITEM_NAME', 'PRDLST_NM', 'TITLE', 'LETTER_TITLE', 'TARGET_INGR_KOR_NM', 'INGR_KOR_NAME'].includes(k)) {
-            let valStr = String(upperItem[k]);
-            if (valStr.length > 5 && !/^\d+$/.test(valStr) && !valStr.includes(extractedDate)) {
-              fallback.push(valStr);
+def fetch_data(base_url, ops, key_name):
+    for op in ops:
+        url = f"{base_url}/{op}"
+        for json_param in [{"type": "json"}, {"returnType": "json"}]:
+            params = {
+                "serviceKey": API_KEY,
+                "pageNo": "1",
+                "numOfRows": "300"
             }
-          }
-        }
-        return fallback.length > 0 ? fallback.join(' | ') : '-';
-      }
-      return '-';
-    }
+            params.update(json_param)
+            
+            try:
+                res = requests.get(url, params=params, timeout=20)
+                if res.status_code == 200:
+                    data = res.json()
+                    body = data.get("response", {}).get("body", {}) or data.get("body", {})
+                    items = body.get("items", [])
+                    
+                    if isinstance(items, dict) and "item" in items:
+                        items = items["item"]
+                        
+                    if items and isinstance(items, list) and len(items) > 0:
+                        print(f"✅ [{key_name}] {op} 주소에서 {len(items)}건 정상 수집 완료!")
+                        return items
+            except Exception:
+                pass
+                
+    print(f"❌ [{key_name}] 수집 실패")
+    return []
 
-    function categorize(text) {
-      if (!text || text === '-') return '기타';
-      if (text.includes('취소')) return '허가취소';
-      if (text.includes('정지')) return '업무정지';
-      if (text.includes('과징금')) return '과징금';
-      if (text.includes('경고')) return '경고';
-      return '기타';
-    }
+def main():
+    print("🚀 식약처 API 안정형 데이터 수집 가동...")
+    os.makedirs("data", exist_ok=True)
+    
+    sanctions_base = "https://apis.data.go.kr/1471000/MdcinExaathrService04"
+    sanctions_ops = ["getMdcinExaathrList04", "getMdcinExaathrList03", "getMdcinExaathrList02", "getMdcinExaathrList01", "getMdcinExaathrList"]
+    sanctions = fetch_data(sanctions_base, sanctions_ops, "행정처분")
+    with open("data/sanctions.json", "w", encoding="utf-8") as f:
+        json.dump(sanctions, f, ensure_ascii=False, indent=2)
 
-    function getColorClass(type) {
-      switch(type) {
-        case '허가취소': return 'text-[#DE5A5A] font-bold';
-        case '업무정지': return 'text-[#B48A44] font-bold';
-        case '과징금': return 'text-[#4574D8] font-bold';
-        case '경고': return 'text-[#709E45] font-bold';
-        default: return 'text-[#78829C] font-medium';
-      }
-    }
+    letters_base = "https://apis.data.go.kr/1471000/DrugSafeLetterService02"
+    letters_ops = ["getDrugSafeLetterList02", "getDrugSafeLetterList01", "getDrugSafeLetterList"]
+    letters = fetch_data(letters_base, letters_ops, "안전성서한")
+    with open("data/safe_letters.json", "w", encoding="utf-8") as f:
+        json.dump(letters, f, ensure_ascii=False, indent=2)
 
-    function setFilter(keyword) {
-      const searchInput = document.getElementById('searchSanctions');
-      searchInput.value = keyword;
-      renderSanctionsTable();
-      document.getElementById('sanctionsTableSection').scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
-
-    async function loadData() {
-      try {
-        const [resS, resL] = await Promise.all([
-          fetch('data/sanctions.json').then(r => r.ok ? r.json() : []),
-          fetch('data/safe_letters.json').then(r => r.ok ? r.json() : [])
-        ]);
-        rawSanctions = Array.isArray(resS) ? resS : [];
-        rawSafeLetters = Array.isArray(resL) ? resL : [];
-
-        const now = new Date();
-        document.getElementById('lastUpdateTime').innerText = `${now.getFullYear()}.${String(now.getMonth()+1).padStart(2,'0')}.${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')} KST`;
-        document.getElementById('countSafeLetters').innerText = `${rawSafeLetters.length}건`;
-
-        processAndRenderCharts();
-        renderSanctionsTable();
-        renderLettersTable();
-      } catch (err) { console.error("데이터 로드 에러:", err); }
-    }
-
-    function processAndRenderCharts() {
-      const total = rawSanctions.length;
-      document.getElementById('badgeTotal').innerText = total;
-      document.getElementById('cardTotal').innerText = total;
-      document.getElementById('donutCenterTotal').innerText = total;
-
-      const typeCounts = { '허가취소': 0, '업무정지': 0, '과징금': 0, '경고': 0, '기타': 0 };
-      const yearTypeCounts = {};
-      let currentYearCount = 0;
-      const currentYear = new Date().getFullYear().toString();
-
-      rawSanctions.forEach(item => {
-        const dateStr = extractDateFallback(item);
-        const contentStr = getVal(item, ['VIOLT_CN', 'LAW_DSCR', 'ADM_DISPO_CTNT', 'DISP_CN', 'EXCPT_SUB_TEXT'], true);
-        const type = categorize(contentStr);
-        typeCounts[type]++;
-
-        let year = "알수없음";
-        let cleanDate = dateStr.replace(/[^0-9]/g, '');
-        if(cleanDate.length >= 4) year = cleanDate.substring(0, 4);
-        
-        if(year === currentYear) currentYearCount++;
-        if(!yearTypeCounts[year]) yearTypeCounts[year] = { '허가취소': 0, '업무정지': 0, '과징금': 0, '경고': 0, '기타': 0 };
-        yearTypeCounts[year][type]++;
-      });
-
-      document.getElementById('cardThisYear').innerText = currentYearCount;
-      document.getElementById('cardCancel').innerText = typeCounts['허가취소'];
-      document.getElementById('cardSuspend').innerText = typeCounts['업무정지'];
-      document.getElementById('cardFine').innerText = typeCounts['과징금'];
-      document.getElementById('cardWarn').innerText = typeCounts['경고'];
-
-      const colors = { '허가취소': '#DE5A5A', '업무정지': '#B48A44', '과징금': '#4574D8', '경고': '#709E45', '기타': '#78829C' };
-      const donutCtx = document.getElementById('typeDonutChart').getContext('2d');
-      if(donutChartInstance) donutChartInstance.destroy();
-      donutChartInstance = new Chart(donutCtx, {
-        type: 'doughnut',
-        data: { labels: Object.keys(typeCounts), datasets: [{ data: Object.values(typeCounts), backgroundColor: Object.keys(typeCounts).map(k => colors[k]), borderWidth: 0, cutout: '75%' }] },
-        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { font: { size: 14 } } } } }
-      });
-
-      const years = Object.keys(yearTypeCounts).filter(y => y !== "알수없음").sort().reverse();
-      const barDatasets = Object.keys(colors).map(type => {
-        return { label: type, data: years.map(y => yearTypeCounts[y][type]), backgroundColor: colors[type], barThickness: 24, borderRadius: 4 };
-      });
-      const barCtx = document.getElementById('yearBarChart').getContext('2d');
-      if(barChartInstance) barChartInstance.destroy();
-      barChartInstance = new Chart(barCtx, {
-        type: 'bar',
-        data: { labels: years.map(y => `${y}년`), datasets: barDatasets },
-        options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, scales: { x: { stacked: true }, y: { stacked: true } }, plugins: { legend: { labels: { font: { size: 14 } } } } }
-      });
-    }
-
-    function renderSanctionsTable() {
-      const q = document.getElementById('searchSanctions').value.trim().toLowerCase();
-      const tbody = document.getElementById('sanctionsBody');
-      let filtered = rawSanctions.filter(i => JSON.stringify(i).toLowerCase().includes(q));
-      
-      // 최신 날짜가 맨 위로 오도록 내림차순 정렬 적용
-      filtered.sort((a, b) => {
-        const dateA = extractDateFallback(a);
-        const dateB = extractDateFallback(b);
-        const timeA = dateA !== '-' ? new Date(dateA).getTime() : 0;
-        const timeB = dateB !== '-' ? new Date(dateB).getTime() : 0;
-        return (isNaN(timeB) ? 0 : timeB) - (isNaN(timeA) ? 0 : timeA);
-      });
-      
-      tbody.innerHTML = filtered.map(item => {
-        const dateStr = extractDateFallback(item);
-        const contentStr = getVal(item, ['VIOLT_CN', 'LAW_DSCR', 'ADM_DISPO_CTNT', 'DISP_CN', 'EXCPT_SUB_TEXT'], true);
-        const type = categorize(contentStr);
-        const colorClass = getColorClass(type);
-        
-        return `
-        <tr class="hover:bg-slate-50 transition">
-          <td class="p-5 text-slate-500 font-mono text-sm whitespace-nowrap align-top">${dateStr}</td>
-          <td class="p-5 font-bold text-slate-800 whitespace-normal break-words align-top">${getVal(item, ['ENTP_NAME', 'ENTRPS_NM'])}</td>
-          <td class="p-5 text-slate-700 whitespace-normal break-words align-top leading-relaxed">${getVal(item, ['ITEM_NAME', 'PRDLST_NM'])}</td>
-          <td class="p-5 ${colorClass} whitespace-normal break-words align-top leading-relaxed">${contentStr}</td>
-        </tr>
-      `}).join('') || `<tr><td colspan="4" class="p-10 text-center text-slate-400">조회된 내역이 없습니다.</td></tr>`;
-    }
-
-    function renderLettersTable() {
-      const q = document.getElementById('searchLetters').value.trim().toLowerCase();
-      const tbody = document.getElementById('safeLettersBody');
-      let filtered = rawSafeLetters.filter(i => JSON.stringify(i).toLowerCase().includes(q));
-      
-      // 안전성 서한도 최신순 내림차순 정렬 적용
-      filtered.sort((a, b) => {
-        const dateA = extractDateFallback(a);
-        const dateB = extractDateFallback(b);
-        const timeA = dateA !== '-' ? new Date(dateA).getTime() : 0;
-        const timeB = dateB !== '-' ? new Date(dateB).getTime() : 0;
-        return (isNaN(timeB) ? 0 : timeB) - (isNaN(timeA) ? 0 : timeA);
-      });
-      
-      tbody.innerHTML = filtered.map(item => {
-        const dateStr = extractDateFallback(item);
-        const contentStr = getVal(item, ['MAIN_CN', 'LETTER_CONTENT'], true);
-        return `
-        <tr class="hover:bg-slate-50 transition">
-          <td class="p-5 text-slate-500 font-mono text-sm whitespace-nowrap align-top">${dateStr}</td>
-          <td class="p-5 font-bold text-slate-800 whitespace-normal break-words align-top">${getVal(item, ['TITLE', 'LETTER_TITLE'])}</td>
-          <td class="p-5 text-blue-600 font-medium whitespace-normal break-words align-top leading-relaxed">${getVal(item, ['TARGET_INGR_KOR_NM', 'INGR_KOR_NAME'])}</td>
-          <td class="p-5 text-slate-700 whitespace-normal break-words align-top leading-relaxed">${contentStr}</td>
-        </tr>
-      `}).join('') || `<tr><td colspan="4" class="p-10 text-center text-slate-400">조회된 내역이 없습니다.</td></tr>`;
-    }
-
-    function switchTab(tab) {
-      document.getElementById('viewSanctions').classList.toggle('hidden', tab !== 'sanctions');
-      document.getElementById('viewSafeLetters').classList.toggle('hidden', tab !== 'safeLetters');
-      document.getElementById('tabSanctions').className = tab === 'sanctions' ? "pb-3 border-b-4 border-blue-600 text-blue-600 font-bold transition" : "pb-3 border-b-4 border-transparent text-slate-500 hover:text-slate-800 transition";
-      document.getElementById('tabSafeLetters').className = tab === 'safeLetters' ? "pb-3 border-b-4 border-blue-600 text-blue-600 font-bold transition" : "pb-3 border-b-4 border-transparent text-slate-500 hover:text-slate-800 transition";
-    }
-
-    window.onload = loadData;
-  </script>
-</body>
-</html>
+if __name__ == "__main__":
+    main()
