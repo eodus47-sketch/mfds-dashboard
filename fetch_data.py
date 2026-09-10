@@ -2,27 +2,28 @@ import os
 import json
 import urllib.parse
 import requests
+import time
 
 ENCODED_KEY = "UeUGCJBDne0mX4NRwLK6TCdYTL99EzScvgxb0ai3l5d0M5YIO3YriZo%2FMiH1Amq9vL13f%2F9TtMyVcInZQf%2FsfQ%3D%3D"
-API_KEY = urllib.parse.unquote(ENCODED_KEY)
 
 def fetch_data(base_url, ops, key_name):
     for op in ops:
-        url = f"{base_url}/{op}"
-        for json_param in [{"type": "json"}, {"returnType": "json"}]:
+        for json_type in ["type", "returnType"]:
             all_items = []
+            success = False
             
-            # 100건씩 10페이지(총 1,000건)를 순서대로 넘겨가며 수집 (Pagination)
+            # 100건씩 10페이지 = 총 1,000건 수집 루프
             for page in range(1, 11):
-                params = {
-                    "serviceKey": API_KEY,
-                    "pageNo": str(page),
-                    "numOfRows": "100"
-                }
-                params.update(json_param)
+                # 파라미터 꼬임 방지를 위해 원본 주소 직접 조립
+                target_url = f"{base_url}/{op}?serviceKey={ENCODED_KEY}&pageNo={page}&numOfRows=100&{json_type}=json"
+                
+                # 방화벽 우회 프록시 터널 적용 (이 부분이 빠져서 0건이 떴던 것입니다!)
+                proxy_url = f"https://api.allorigins.win/raw?url={urllib.parse.quote(target_url)}"
                 
                 try:
-                    res = requests.get(url, params=params, timeout=15)
+                    print(f"[{key_name}] {page}페이지 우회 수집 중...")
+                    res = requests.get(proxy_url, timeout=20)
+                    
                     if res.status_code == 200:
                         data = res.json()
                         body = data.get("response", {}).get("body", {}) or data.get("body", {})
@@ -33,20 +34,25 @@ def fetch_data(base_url, ops, key_name):
                             
                         if items and isinstance(items, list) and len(items) > 0:
                             all_items.extend(items)
+                            success = True
+                            time.sleep(1) # 공공 API 차단 방지를 위한 1초 휴식
                         else:
-                            break # 더 이상 데이터가 없으면 페이지 넘기기 중단
-                except Exception:
+                            break # 해당 페이지에 더 이상 데이터가 없으면 중단
+                    else:
+                        break # 프록시 에러 시 중단
+                except Exception as e:
+                    print(f"에러 발생: {e}")
                     break
             
-            if len(all_items) > 0:
+            if success and len(all_items) > 0:
                 print(f"✅ [{key_name}] {op} 주소에서 총 {len(all_items)}건 수집 완료!")
                 return all_items
                 
-    print(f"❌ [{key_name}] 모든 주소 시도 실패")
+    print(f"❌ [{key_name}] 모든 우회 경로 시도 실패")
     return []
 
 def main():
-    print("🚀 [1000건 확장 모드] 식약처 API 수집 시작...")
+    print("🚀 [1000건 확장 + 해외 차단 우회 복구 모드] 식약처 API 수집 시작...")
     os.makedirs("data", exist_ok=True)
     
     sanctions_base = "https://apis.data.go.kr/1471000/MdcinExaathrService04"
