@@ -3,26 +3,34 @@ import json
 import urllib.parse
 import requests
 import time
+import random
 
 ENCODED_KEY = "UeUGCJBDne0mX4NRwLK6TCdYTL99EzScvgxb0ai3l5d0M5YIO3YriZo%2FMiH1Amq9vL13f%2F9TtMyVcInZQf%2FsfQ%3D%3D"
 
 def fetch_data(base_url, ops, key_name):
-    for op in ops:
-        for json_type in ["type", "returnType"]:
-            all_items = []
-            success = False
-            
-            # 100건씩 10페이지 = 총 1,000건 수집 루프
-            for page in range(1, 11):
-                # 파라미터 꼬임 방지를 위해 원본 주소 직접 조립
-                target_url = f"{base_url}/{op}?serviceKey={ENCODED_KEY}&pageNo={page}&numOfRows=100&{json_type}=json"
+    # 안정성이 훨씬 높은 우회 프록시 서버 3종으로 교체 및 확장
+    proxies = [
+        "https://api.codetabs.com/v1/proxy?quest=",
+        "https://api.allorigins.win/raw?url=",
+        "https://corsproxy.io/?"
+    ]
+    
+    for proxy in proxies:
+        for op in ops:
+            for json_type in ["type", "returnType"]:
+                # 여러 페이지로 쪼개지 않고, 한 번의 요청으로 1000건을 요구하여 프록시 차단 방지
+                target_url = f"{base_url}/{op}?serviceKey={ENCODED_KEY}&pageNo=1&numOfRows=1000&{json_type}=json"
+                encoded_url = urllib.parse.quote(target_url)
                 
-                # 방화벽 우회 프록시 터널 적용 (이 부분이 빠져서 0건이 떴던 것입니다!)
-                proxy_url = f"https://api.allorigins.win/raw?url={urllib.parse.quote(target_url)}"
-                
+                # allorigins 서버의 악명 높은 캐시 고착화 문제 해결용 난수(Random) 추가
+                if "allorigins" in proxy:
+                    proxy_url = f"{proxy}{encoded_url}&disableCache=true&_={random.randint(1,99999)}"
+                else:
+                    proxy_url = f"{proxy}{encoded_url}"
+                    
                 try:
-                    print(f"[{key_name}] {page}페이지 우회 수집 중...")
-                    res = requests.get(proxy_url, timeout=20)
+                    print(f"[{key_name}] {proxy.split('//')[1].split('/')[0]} 서버로 1000건 단건 수집 요청 중...")
+                    res = requests.get(proxy_url, timeout=30)
                     
                     if res.status_code == 200:
                         data = res.json()
@@ -32,27 +40,23 @@ def fetch_data(base_url, ops, key_name):
                         if isinstance(items, dict) and "item" in items:
                             items = items["item"]
                             
+                        # 단건 요청으로 정상적으로 데이터를 받았다면 즉시 종료
                         if items and isinstance(items, list) and len(items) > 0:
-                            all_items.extend(items)
-                            success = True
-                            time.sleep(1) # 공공 API 차단 방지를 위한 1초 휴식
+                            print(f"✅ [{key_name}] 총 {len(items)}건 수집 대성공!")
+                            return items
                         else:
-                            break # 해당 페이지에 더 이상 데이터가 없으면 중단
+                            print("  -> 응답은 성공했으나 데이터가 비어있습니다.")
                     else:
-                        break # 프록시 에러 시 중단
+                        print(f"  -> 상태코드 에러: {res.status_code}")
                 except Exception as e:
-                    print(f"에러 발생: {e}")
-                    break
-            
-            if success and len(all_items) > 0:
-                print(f"✅ [{key_name}] {op} 주소에서 총 {len(all_items)}건 수집 완료!")
-                return all_items
-                
-    print(f"❌ [{key_name}] 모든 우회 경로 시도 실패")
+                    print(f"  -> 통신 에러 발생: {e}")
+                    time.sleep(1) # 에러 발생 시 방화벽 자극을 피하기 위해 1초 대기
+                    
+    print(f"❌ [{key_name}] 모든 우회 경로 및 조합 시도 실패")
     return []
 
 def main():
-    print("🚀 [1000건 확장 + 해외 차단 우회 복구 모드] 식약처 API 수집 시작...")
+    print("🚀 [1000건 단건 수집 + 고안정성 프록시 모드] 식약처 API 수집 시작...")
     os.makedirs("data", exist_ok=True)
     
     sanctions_base = "https://apis.data.go.kr/1471000/MdcinExaathrService04"
