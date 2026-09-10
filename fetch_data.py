@@ -38,7 +38,7 @@
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div class="bg-white p-8 rounded-xl card-shadow border border-slate-100 lg:col-span-1 flex flex-col">
           <h2 class="text-xl font-bold mb-2">처분 유형 구성</h2>
-          <div class="relative flex-grow flex items-center justify-center min-h-[400px]">
+          <div class="relative flex-grow flex items-center justify-center min-h-[300px]">
             <canvas id="typeDonutChart"></canvas>
             <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none mt-2">
               <span class="text-4xl font-black text-slate-700" id="donutCenterTotal">0</span>
@@ -48,7 +48,7 @@
         </div>
         <div class="bg-white p-8 rounded-xl card-shadow border border-slate-100 lg:col-span-2 flex flex-col">
           <h2 class="text-xl font-bold mb-2">연도별 처분 건수</h2>
-          <div class="flex-grow min-h-[400px]">
+          <div class="flex-grow min-h-[300px]">
             <canvas id="yearBarChart"></canvas>
           </div>
         </div>
