@@ -5,26 +5,20 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>식약처 안전성서한 및 행정처분 대시보드</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <style>
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-  </style>
+  <style>body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }</style>
 </head>
 <body class="bg-slate-50 text-slate-900 min-h-screen">
-
   <div class="max-w-7xl mx-auto px-4 py-8">
-    <!-- 상단 헤더 및 검색창 -->
     <header class="mb-8 flex flex-col md:flex-row md:items-center md:justify-between border-b pb-6">
       <div>
         <h1 class="text-2xl font-bold text-slate-800 tracking-tight">💊 식약처 규제·안전 모니터링 대시보드</h1>
         <p class="text-sm text-slate-500 mt-1">매일 아침 06:00 자동 갱신 | 의약품 안전성 서한 & 행정처분 실시간 목록</p>
       </div>
       <div class="mt-4 md:mt-0">
-        <input type="text" id="searchInput" onkeyup="filterData()" placeholder="업체명, 제품명, 성분명 검색..." 
-               class="w-full md:w-80 px-4 py-2 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-white">
+        <input type="text" id="searchInput" onkeyup="filterData()" placeholder="업체명, 제품명, 성분명 검색..." class="w-full md:w-80 px-4 py-2 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-white">
       </div>
     </header>
 
-    <!-- 요약 현황판 -->
     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
       <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
         <div>
@@ -42,45 +36,26 @@
       </div>
     </div>
 
-    <!-- 메뉴 탭 -->
     <div class="flex border-b border-slate-200 mb-6 space-x-6 text-sm font-semibold">
-      <button id="tabSanctions" onclick="switchTab('sanctions')" class="pb-3 border-b-2 border-blue-600 text-blue-600">
-        의약품 행정처분 목록
-      </button>
-      <button id="tabSafeLetters" onclick="switchTab('safeLetters')" class="pb-3 border-b-2 border-transparent text-slate-500 hover:text-slate-800">
-        의약품 안전성서한 목록
-      </button>
+      <button id="tabSanctions" onclick="switchTab('sanctions')" class="pb-3 border-b-2 border-blue-600 text-blue-600">의약품 행정처분 목록</button>
+      <button id="tabSafeLetters" onclick="switchTab('safeLetters')" class="pb-3 border-b-2 border-transparent text-slate-500 hover:text-slate-800">의약품 안전성서한 목록</button>
     </div>
 
-    <!-- 데이터 테이블 -->
     <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-      
-      <!-- 행정처분 표 -->
+      <!-- 행정처분 -->
       <div id="sanctionsTableContainer" class="overflow-x-auto">
         <table class="w-full text-left border-collapse text-sm">
           <thead class="bg-slate-100 text-slate-600 border-b border-slate-200 text-xs uppercase font-medium">
-            <tr>
-              <th class="p-4">처분일자</th>
-              <th class="p-4">업체명</th>
-              <th class="p-4">제품명</th>
-              <th class="p-4">처분내용</th>
-              <th class="p-4">위반법령/사유</th>
-            </tr>
+            <tr><th class="p-4">처분일자</th><th class="p-4">업체명</th><th class="p-4">제품명</th><th class="p-4">처분내용</th><th class="p-4">위반법령/사유</th></tr>
           </thead>
           <tbody id="sanctionsBody" class="divide-y divide-slate-100"></tbody>
         </table>
       </div>
-
-      <!-- 안전성서한 표 -->
+      <!-- 안전성서한 -->
       <div id="safeLettersTableContainer" class="overflow-x-auto hidden">
         <table class="w-full text-left border-collapse text-sm">
           <thead class="bg-slate-100 text-slate-600 border-b border-slate-200 text-xs uppercase font-medium">
-            <tr>
-              <th class="p-4">배포일자</th>
-              <th class="p-4">서한 제목</th>
-              <th class="p-4">대상 성분</th>
-              <th class="p-4">주요 내용</th>
-            </tr>
+            <tr><th class="p-4">배포일자</th><th class="p-4">서한 제목</th><th class="p-4">대상 성분</th><th class="p-4">주요 내용</th></tr>
           </thead>
           <tbody id="safeLettersBody" class="divide-y divide-slate-100"></tbody>
         </table>
@@ -92,69 +67,63 @@
     let rawSanctions = [];
     let rawSafeLetters = [];
 
+    function getVal(item, keys) {
+      for (let key of keys) {
+        if (item[key] !== undefined && item[key] !== null && item[key] !== "") {
+          return item[key];
+        }
+      }
+      return '-';
+    }
+
     async function loadData() {
       try {
-        const [resSanctions, resSafeLetters] = await Promise.all([
+        const [resS, resL] = await Promise.all([
           fetch('data/sanctions.json').then(r => r.ok ? r.json() : []),
           fetch('data/safe_letters.json').then(r => r.ok ? r.json() : [])
         ]);
-        rawSanctions = Array.isArray(resSanctions) ? resSanctions : [];
-        rawSafeLetters = Array.isArray(resSafeLetters) ? resSafeLetters : [];
-        
+        rawSanctions = Array.isArray(resS) ? resS : [];
+        rawSafeLetters = Array.isArray(resL) ? resL : [];
         document.getElementById('countSanctions').innerText = `${rawSanctions.length}건`;
         document.getElementById('countSafeLetters').innerText = `${rawSafeLetters.length}건`;
         renderTables();
-      } catch (err) {
-        console.error("데이터를 불러오지 못했습니다.", err);
-      }
+      } catch (err) { console.error(err); }
     }
 
     function renderTables() {
-      const query = document.getElementById('searchInput').value.trim().toLowerCase();
+      const q = document.getElementById('searchInput').value.trim().toLowerCase();
 
       // 행정처분 렌더링
       const sBody = document.getElementById('sanctionsBody');
-      const filteredS = rawSanctions.filter(item => JSON.stringify(item).toLowerCase().includes(query));
-      sBody.innerHTML = filteredS.map(item => `
-        <tr class="hover:bg-slate-50 transition">
-          <td class="p-4 whitespace-nowrap text-slate-500 font-mono text-xs">${item.EXCPT_NOTIC_DT || item.DISP_DT || '-'}</td>
-          <td class="p-4 font-semibold text-slate-800">${item.ENTRPS_NM || '-'}</td>
-          <td class="p-4 text-slate-700">${item.PRDLST_NM || '-'}</td>
-          <td class="p-4 text-rose-600 font-medium">${item.EXCPT_SUB_TEXT || item.DISP_CN || '-'}</td>
-          <td class="p-4 text-slate-500 text-xs max-w-xs truncate" title="${item.LAW_DSCR || ''}">${item.LAW_DSCR || '-'}</td>
+      const fS = rawSanctions.filter(i => JSON.stringify(i).toLowerCase().includes(q));
+      sBody.innerHTML = fS.map(item => `
+        <tr class="hover:bg-slate-50">
+          <td class="p-4 text-slate-500 font-mono text-xs">${getVal(item, ['dispDt', 'DISP_DT', 'admDispoYmd', 'EXCPT_NOTIC_DT'])}</td>
+          <td class="p-4 font-semibold text-slate-800">${getVal(item, ['entpName', 'ENTP_NAME', 'entrpsNm', 'ENTRPS_NM'])}</td>
+          <td class="p-4 text-slate-700">${getVal(item, ['itemName', 'ITEM_NAME', 'prdlstNm', 'PRDLST_NM'])}</td>
+          <td class="p-4 text-rose-600 font-medium">${getVal(item, ['admDispoCtnt', 'ADM_DISPO_CTNT', 'dispCn', 'DISP_CN'])}</td>
+          <td class="p-4 text-slate-500 text-xs max-w-xs truncate" title="${getVal(item, ['violtCn', 'VIOLT_CN', 'lawDscr'])}">${getVal(item, ['violtCn', 'VIOLT_CN', 'lawDscr'])}</td>
         </tr>
-      `).join('') || `<tr><td colspan="5" class="p-8 text-center text-slate-400">조회된 내역이 없습니다.</td></tr>`;
+      `).join('') || `<tr><td colspan="5" class="p-8 text-center text-slate-400">내역이 없습니다.</td></tr>`;
 
       // 안전성서한 렌더링
       const lBody = document.getElementById('safeLettersBody');
-      const filteredL = rawSafeLetters.filter(item => JSON.stringify(item).toLowerCase().includes(query));
-      lBody.innerHTML = filteredL.map(item => `
-        <tr class="hover:bg-slate-50 transition">
-          <td class="p-4 whitespace-nowrap text-slate-500 font-mono text-xs">${item.NOTICE_DATE || item.PBLNT_DATE || '-'}</td>
-          <td class="p-4 font-semibold text-slate-800">${item.LETTER_TITLE || item.TITLE || '-'}</td>
-          <td class="p-4 text-blue-600 font-medium">${item.INGR_KOR_NAME || item.INGR_ENG_NAME || '-'}</td>
-          <td class="p-4 text-slate-500 text-xs max-w-md truncate" title="${item.LETTER_CONTENT || ''}">${item.LETTER_CONTENT || '-'}</td>
+      const fL = rawSafeLetters.filter(i => JSON.stringify(i).toLowerCase().includes(q));
+      lBody.innerHTML = fL.map(item => `
+        <tr class="hover:bg-slate-50">
+          <td class="p-4 text-slate-500 font-mono text-xs">${getVal(item, ['pblntDate', 'PBLNT_DATE', 'noticeDate', 'NOTICE_DATE'])}</td>
+          <td class="p-4 font-semibold text-slate-800">${getVal(item, ['title', 'TITLE', 'letterTitle'])}</td>
+          <td class="p-4 text-blue-600 font-medium">${getVal(item, ['targetIngrKorNm', 'TARGET_INGR_KOR_NM', 'ingrKorName'])}</td>
+          <td class="p-4 text-slate-500 text-xs max-w-md truncate" title="${getVal(item, ['mainCn', 'MAIN_CN', 'letterContent'])}">${getVal(item, ['mainCn', 'MAIN_CN', 'letterContent'])}</td>
         </tr>
-      `).join('') || `<tr><td colspan="4" class="p-8 text-center text-slate-400">조회된 내역이 없습니다.</td></tr>`;
+      `).join('') || `<tr><td colspan="4" class="p-8 text-center text-slate-400">내역이 없습니다.</td></tr>`;
     }
 
     function switchTab(tab) {
-      const sContainer = document.getElementById('sanctionsTableContainer');
-      const lContainer = document.getElementById('safeLettersTableContainer');
-      const tSanctions = document.getElementById('tabSanctions');
-      const tSafeLetters = document.getElementById('tabSafeLetters');
-
-      if (tab === 'sanctions') {
-        sContainer.classList.remove('hidden');
-        lContainer.classList.add('hidden');
-        tSanctions.className = "pb-3 border-b-2 border-blue-600 text-blue-600";
-        tSafeLetters.className = "pb-3 border-b-2 border-transparent text-slate-500 hover:text-slate-800";
-      } else {
-        sContainer.classList.add('hidden');
-        lContainer.classList.remove('hidden');
-        tSafeLetters.className = "pb-3 border-b-2 border-blue-600 text-blue-600";
-        tSanctions.className = "pb-3 border-b-2 border-transparent text-slate-500 hover:text-slate-800";
-      }
+      document.getElementById('sanctionsTableContainer').classList.toggle('hidden', tab !== 'sanctions');
+      document.getElementById('safeLettersTableContainer').classList.toggle('hidden', tab !== 'safeLetters');
+      document.getElementById('tabSanctions').className = tab === 'sanctions' ? "pb-3 border-b-2 border-blue-600 text-blue-600" : "pb-3 border-b-2 border-transparent text-slate-500 hover:text-slate-800";
+      document.getElementById('tabSafeLetters').className = tab === 'safeLetters' ? "pb-3 border-b-2 border-blue-600 text-blue-600" : "pb-3 border-b-2 border-transparent text-slate-500 hover:text-slate-800";
     }
 
     window.onload = loadData;
