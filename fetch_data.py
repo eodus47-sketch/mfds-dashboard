@@ -10,34 +10,43 @@ def fetch_data(base_url, ops, key_name):
     for op in ops:
         url = f"{base_url}/{op}"
         for json_param in [{"type": "json"}, {"returnType": "json"}]:
-            params = {
-                "serviceKey": API_KEY,
-                "pageNo": "1",
-                "numOfRows": "1000" # 300건에서 1,000건으로 수집량 대폭 확장
-            }
-            params.update(json_param)
+            all_items = []
             
-            try:
-                res = requests.get(url, params=params, timeout=20)
-                if res.status_code == 200:
-                    data = res.json()
-                    body = data.get("response", {}).get("body", {}) or data.get("body", {})
-                    items = body.get("items", [])
-                    
-                    if isinstance(items, dict) and "item" in items:
-                        items = items["item"]
+            # 100건씩 10페이지(총 1,000건)를 순서대로 넘겨가며 수집 (Pagination)
+            for page in range(1, 11):
+                params = {
+                    "serviceKey": API_KEY,
+                    "pageNo": str(page),
+                    "numOfRows": "100"
+                }
+                params.update(json_param)
+                
+                try:
+                    res = requests.get(url, params=params, timeout=15)
+                    if res.status_code == 200:
+                        data = res.json()
+                        body = data.get("response", {}).get("body", {}) or data.get("body", {})
+                        items = body.get("items", [])
                         
-                    if items and isinstance(items, list) and len(items) > 0:
-                        print(f"✅ [{key_name}] {op} 주소에서 {len(items)}건 수집 대성공!")
-                        return items
-            except Exception:
-                pass
+                        if isinstance(items, dict) and "item" in items:
+                            items = items["item"]
+                            
+                        if items and isinstance(items, list) and len(items) > 0:
+                            all_items.extend(items)
+                        else:
+                            break # 더 이상 데이터가 없으면 페이지 넘기기 중단
+                except Exception:
+                    break
+            
+            if len(all_items) > 0:
+                print(f"✅ [{key_name}] {op} 주소에서 총 {len(all_items)}건 수집 완료!")
+                return all_items
                 
     print(f"❌ [{key_name}] 모든 주소 시도 실패")
     return []
 
 def main():
-    print("🚀 [최종 최적화 모드] 식약처 API 수집 시작...")
+    print("🚀 [1000건 확장 모드] 식약처 API 수집 시작...")
     os.makedirs("data", exist_ok=True)
     
     sanctions_base = "https://apis.data.go.kr/1471000/MdcinExaathrService04"
