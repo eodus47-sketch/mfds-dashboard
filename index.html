@@ -54,19 +54,25 @@
         </div>
       </div>
 
-      <!-- 요약 카드 (클릭 필터 기능 추가) -->
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div onclick="setFilter('')" class="bg-white p-6 rounded-xl card-shadow border border-slate-100 clickable-card" title="클릭시 전체 목록 보기">
-          <div class="text-base text-slate-500 font-semibold mb-2">📊 전체 처분</div><div class="text-4xl font-black text-slate-800" id="cardTotal">0건</div>
+      <!-- 요약 카드 6칸으로 확장 (과징금, 경고 추가) -->
+      <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+        <div onclick="setFilter('')" class="bg-white p-5 rounded-xl card-shadow border border-slate-100 clickable-card">
+          <div class="text-sm text-slate-500 font-bold mb-1">📊 전체 처분</div><div class="text-3xl font-black text-slate-800" id="cardTotal">0</div>
         </div>
-        <div onclick="setFilter(new Date().getFullYear().toString())" class="bg-white p-6 rounded-xl card-shadow border border-slate-100 clickable-card" title="클릭시 올해 목록 보기">
-          <div class="text-base text-emerald-600 font-semibold mb-2">📅 올해 처분</div><div class="text-4xl font-black text-slate-800" id="cardThisYear">0건</div>
+        <div onclick="setFilter(new Date().getFullYear().toString())" class="bg-white p-5 rounded-xl card-shadow border border-slate-100 clickable-card">
+          <div class="text-sm text-emerald-600 font-bold mb-1">📅 올해 처분</div><div class="text-3xl font-black text-slate-800" id="cardThisYear">0</div>
         </div>
-        <div onclick="setFilter('취소')" class="bg-white p-6 rounded-xl card-shadow border border-rose-50 border-t-4 border-t-rose-400 clickable-card" title="클릭시 허가취소 목록 보기">
-          <div class="text-base text-rose-500 font-semibold mb-2">❌ 허가취소</div><div class="text-4xl font-black text-slate-800" id="cardCancel">0건</div>
+        <div onclick="setFilter('취소')" class="bg-white p-5 rounded-xl card-shadow border-t-4 border-t-[#DE5A5A] clickable-card">
+          <div class="text-sm text-[#DE5A5A] font-bold mb-1">❌ 허가취소</div><div class="text-3xl font-black text-slate-800" id="cardCancel">0</div>
         </div>
-        <div onclick="setFilter('정지')" class="bg-white p-6 rounded-xl card-shadow border border-amber-50 border-t-4 border-t-amber-400 clickable-card" title="클릭시 업무정지 목록 보기">
-          <div class="text-base text-amber-600 font-semibold mb-2">⏸️ 업무정지</div><div class="text-4xl font-black text-slate-800" id="cardSuspend">0건</div>
+        <div onclick="setFilter('정지')" class="bg-white p-5 rounded-xl card-shadow border-t-4 border-t-[#B48A44] clickable-card">
+          <div class="text-sm text-[#B48A44] font-bold mb-1">⏸️ 업무정지</div><div class="text-3xl font-black text-slate-800" id="cardSuspend">0</div>
+        </div>
+        <div onclick="setFilter('과징금')" class="bg-white p-5 rounded-xl card-shadow border-t-4 border-t-[#4574D8] clickable-card">
+          <div class="text-sm text-[#4574D8] font-bold mb-1">💰 과징금</div><div class="text-3xl font-black text-slate-800" id="cardFine">0</div>
+        </div>
+        <div onclick="setFilter('경고')" class="bg-white p-5 rounded-xl card-shadow border-t-4 border-t-[#709E45] clickable-card">
+          <div class="text-sm text-[#709E45] font-bold mb-1">⚠️ 경고</div><div class="text-3xl font-black text-slate-800" id="cardWarn">0</div>
         </div>
       </div>
 
@@ -118,8 +124,7 @@
     let donutChartInstance = null;
     let barChartInstance = null;
 
-    // 하이픈(-), 띄어쓰기 등 불규칙한 날짜 포맷까지 완벽하게 잡아내는 정규식으로 업그레이드
-    function extractDateFallback(item, removeKeyFromContent = false) {
+    function extractDateFallback(item) {
       const upperItem = {};
       for (let k in item) { if (item.hasOwnProperty(k)) upperItem[k.toUpperCase()] = item[k]; }
       
@@ -129,11 +134,8 @@
       }
       
       const jsonStr = JSON.stringify(item);
-      // 정규식 개선: 20260521 뿐만 아니라 2026-05-21, 2026.05.21 모두 추출
       const match = jsonStr.match(/(20[1-2]\d)[-./\s]?([0-1]\d)[-./\s]?([0-3]\d)/);
-      if (match) {
-        return `${match[1]}-${match[2]}-${match[3]}`;
-      }
+      if (match) return `${match[1]}-${match[2]}-${match[3]}`;
       return '-';
     }
 
@@ -148,9 +150,7 @@
       
       if (isContent) {
         let fallback = [];
-        // 추출된 날짜는 내용에서 중복으로 보이지 않게 제거하는 필터링 조건 강화
         const extractedDate = extractDateFallback(item);
-        
         for (let k in upperItem) {
           if (!['ENTP_NAME', 'ENTRPS_NM', 'ITEM_NAME', 'PRDLST_NM', 'TITLE', 'LETTER_TITLE', 'TARGET_INGR_KOR_NM', 'INGR_KOR_NAME'].includes(k)) {
             let valStr = String(upperItem[k]);
@@ -173,7 +173,17 @@
       return '기타';
     }
 
-    // 카드 클릭 시 실행되는 필터링 및 자동 스크롤 함수
+    // 유형별 색상을 반환하는 함수 추가
+    function getColorClass(type) {
+      switch(type) {
+        case '허가취소': return 'text-[#DE5A5A] font-bold';
+        case '업무정지': return 'text-[#B48A44] font-bold';
+        case '과징금': return 'text-[#4574D8] font-bold';
+        case '경고': return 'text-[#709E45] font-bold';
+        default: return 'text-[#78829C] font-medium';
+      }
+    }
+
     function setFilter(keyword) {
       const searchInput = document.getElementById('searchSanctions');
       searchInput.value = keyword;
@@ -203,7 +213,7 @@
     function processAndRenderCharts() {
       const total = rawSanctions.length;
       document.getElementById('badgeTotal').innerText = total;
-      document.getElementById('cardTotal').innerText = `${total}건`;
+      document.getElementById('cardTotal').innerText = total;
       document.getElementById('donutCenterTotal').innerText = total;
 
       const typeCounts = { '허가취소': 0, '업무정지': 0, '과징금': 0, '경고': 0, '기타': 0 };
@@ -214,7 +224,6 @@
       rawSanctions.forEach(item => {
         const dateStr = extractDateFallback(item);
         const contentStr = getVal(item, ['VIOLT_CN', 'LAW_DSCR', 'ADM_DISPO_CTNT', 'DISP_CN', 'EXCPT_SUB_TEXT'], true);
-        
         const type = categorize(contentStr);
         typeCounts[type]++;
 
@@ -223,25 +232,22 @@
         if(cleanDate.length >= 4) year = cleanDate.substring(0, 4);
         
         if(year === currentYear) currentYearCount++;
-
         if(!yearTypeCounts[year]) yearTypeCounts[year] = { '허가취소': 0, '업무정지': 0, '과징금': 0, '경고': 0, '기타': 0 };
         yearTypeCounts[year][type]++;
       });
 
-      document.getElementById('cardThisYear').innerText = `${currentYearCount}건`;
-      document.getElementById('cardCancel').innerText = `${typeCounts['허가취소']}건`;
-      document.getElementById('cardSuspend').innerText = `${typeCounts['업무정지']}건`;
+      document.getElementById('cardThisYear').innerText = currentYearCount;
+      document.getElementById('cardCancel').innerText = typeCounts['허가취소'];
+      document.getElementById('cardSuspend').innerText = typeCounts['업무정지'];
+      document.getElementById('cardFine').innerText = typeCounts['과징금'];
+      document.getElementById('cardWarn').innerText = typeCounts['경고'];
 
       const colors = { '허가취소': '#DE5A5A', '업무정지': '#B48A44', '과징금': '#4574D8', '경고': '#709E45', '기타': '#78829C' };
-
       const donutCtx = document.getElementById('typeDonutChart').getContext('2d');
       if(donutChartInstance) donutChartInstance.destroy();
       donutChartInstance = new Chart(donutCtx, {
         type: 'doughnut',
-        data: {
-          labels: Object.keys(typeCounts),
-          datasets: [{ data: Object.values(typeCounts), backgroundColor: Object.keys(typeCounts).map(k => colors[k]), borderWidth: 0, cutout: '75%' }]
-        },
+        data: { labels: Object.keys(typeCounts), datasets: [{ data: Object.values(typeCounts), backgroundColor: Object.keys(typeCounts).map(k => colors[k]), borderWidth: 0, cutout: '75%' }] },
         options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { font: { size: 14 } } } } }
       });
 
@@ -249,7 +255,6 @@
       const barDatasets = Object.keys(colors).map(type => {
         return { label: type, data: years.map(y => yearTypeCounts[y][type]), backgroundColor: colors[type], barThickness: 24, borderRadius: 4 };
       });
-
       const barCtx = document.getElementById('yearBarChart').getContext('2d');
       if(barChartInstance) barChartInstance.destroy();
       barChartInstance = new Chart(barCtx, {
@@ -262,17 +267,29 @@
     function renderSanctionsTable() {
       const q = document.getElementById('searchSanctions').value.trim().toLowerCase();
       const tbody = document.getElementById('sanctionsBody');
-      const filtered = rawSanctions.filter(i => JSON.stringify(i).toLowerCase().includes(q));
+      let filtered = rawSanctions.filter(i => JSON.stringify(i).toLowerCase().includes(q));
+      
+      filtered.sort((a, b) => {
+        const dateA = extractDateFallback(a);
+        const dateB = extractDateFallback(b);
+        if (dateA === '-') return 1;
+        if (dateB === '-') return -1;
+        return new Date(dateB) - new Date(dateA);
+      });
       
       tbody.innerHTML = filtered.map(item => {
         const dateStr = extractDateFallback(item);
         const contentStr = getVal(item, ['VIOLT_CN', 'LAW_DSCR', 'ADM_DISPO_CTNT', 'DISP_CN', 'EXCPT_SUB_TEXT'], true);
+        const type = categorize(contentStr);
+        // 차트와 동일한 색상 클래스 적용
+        const colorClass = getColorClass(type);
+        
         return `
         <tr class="hover:bg-slate-50 transition">
           <td class="p-5 text-slate-500 font-mono text-sm whitespace-nowrap align-top">${dateStr}</td>
           <td class="p-5 font-bold text-slate-800 whitespace-normal break-words align-top">${getVal(item, ['ENTP_NAME', 'ENTRPS_NM'])}</td>
           <td class="p-5 text-slate-700 whitespace-normal break-words align-top leading-relaxed">${getVal(item, ['ITEM_NAME', 'PRDLST_NM'])}</td>
-          <td class="p-5 text-rose-600 font-medium whitespace-normal break-words align-top leading-relaxed">${contentStr}</td>
+          <td class="p-5 ${colorClass} whitespace-normal break-words align-top leading-relaxed">${contentStr}</td>
         </tr>
       `}).join('') || `<tr><td colspan="4" class="p-10 text-center text-slate-400">조회된 내역이 없습니다.</td></tr>`;
     }
@@ -280,7 +297,15 @@
     function renderLettersTable() {
       const q = document.getElementById('searchLetters').value.trim().toLowerCase();
       const tbody = document.getElementById('safeLettersBody');
-      const filtered = rawSafeLetters.filter(i => JSON.stringify(i).toLowerCase().includes(q));
+      let filtered = rawSafeLetters.filter(i => JSON.stringify(i).toLowerCase().includes(q));
+      
+      filtered.sort((a, b) => {
+        const dateA = extractDateFallback(a);
+        const dateB = extractDateFallback(b);
+        if (dateA === '-') return 1;
+        if (dateB === '-') return -1;
+        return new Date(dateB) - new Date(dateA);
+      });
       
       tbody.innerHTML = filtered.map(item => {
         const dateStr = extractDateFallback(item);
@@ -290,7 +315,7 @@
           <td class="p-5 text-slate-500 font-mono text-sm whitespace-nowrap align-top">${dateStr}</td>
           <td class="p-5 font-bold text-slate-800 whitespace-normal break-words align-top">${getVal(item, ['TITLE', 'LETTER_TITLE'])}</td>
           <td class="p-5 text-blue-600 font-medium whitespace-normal break-words align-top leading-relaxed">${getVal(item, ['TARGET_INGR_KOR_NM', 'INGR_KOR_NAME'])}</td>
-          <td class="p-5 text-slate-500 whitespace-normal break-words align-top leading-relaxed">${contentStr}</td>
+          <td class="p-5 text-slate-700 whitespace-normal break-words align-top leading-relaxed">${contentStr}</td>
         </tr>
       `}).join('') || `<tr><td colspan="4" class="p-10 text-center text-slate-400">조회된 내역이 없습니다.</td></tr>`;
     }
