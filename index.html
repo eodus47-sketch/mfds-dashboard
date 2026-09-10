@@ -54,7 +54,7 @@
         </div>
       </div>
 
-      <!-- 요약 카드 6칸으로 확장 (과징금, 경고 추가) -->
+      <!-- 요약 카드 6칸 -->
       <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
         <div onclick="setFilter('')" class="bg-white p-5 rounded-xl card-shadow border border-slate-100 clickable-card">
           <div class="text-sm text-slate-500 font-bold mb-1">📊 전체 처분</div><div class="text-3xl font-black text-slate-800" id="cardTotal">0</div>
@@ -134,7 +134,8 @@
       }
       
       const jsonStr = JSON.stringify(item);
-      const match = jsonStr.match(/(20[1-2]\d)[-./\s]?([0-1]\d)[-./\s]?([0-3]\d)/);
+      // 정규식 엄격화: 월은 01~12, 일은 01~31만 매칭되도록 수정하여 사건번호(예: 2023003961) 걸러냄
+      const match = jsonStr.match(/(20[1-2]\d)[-./\s]?(0[1-9]|1[0-2])[-./\s]?(0[1-9]|[1-2]\d|3[0-1])/);
       if (match) return `${match[1]}-${match[2]}-${match[3]}`;
       return '-';
     }
@@ -173,7 +174,6 @@
       return '기타';
     }
 
-    // 유형별 색상을 반환하는 함수 추가
     function getColorClass(type) {
       switch(type) {
         case '허가취소': return 'text-[#DE5A5A] font-bold';
@@ -269,19 +269,19 @@
       const tbody = document.getElementById('sanctionsBody');
       let filtered = rawSanctions.filter(i => JSON.stringify(i).toLowerCase().includes(q));
       
+      // 내림차순 정렬 로직 및 에러 방지(Fail-Safe) 강화
       filtered.sort((a, b) => {
         const dateA = extractDateFallback(a);
         const dateB = extractDateFallback(b);
-        if (dateA === '-') return 1;
-        if (dateB === '-') return -1;
-        return new Date(dateB) - new Date(dateA);
+        const timeA = dateA !== '-' ? new Date(dateA).getTime() : 0;
+        const timeB = dateB !== '-' ? new Date(dateB).getTime() : 0;
+        return (isNaN(timeB) ? 0 : timeB) - (isNaN(timeA) ? 0 : timeA);
       });
       
       tbody.innerHTML = filtered.map(item => {
         const dateStr = extractDateFallback(item);
         const contentStr = getVal(item, ['VIOLT_CN', 'LAW_DSCR', 'ADM_DISPO_CTNT', 'DISP_CN', 'EXCPT_SUB_TEXT'], true);
         const type = categorize(contentStr);
-        // 차트와 동일한 색상 클래스 적용
         const colorClass = getColorClass(type);
         
         return `
@@ -302,9 +302,9 @@
       filtered.sort((a, b) => {
         const dateA = extractDateFallback(a);
         const dateB = extractDateFallback(b);
-        if (dateA === '-') return 1;
-        if (dateB === '-') return -1;
-        return new Date(dateB) - new Date(dateA);
+        const timeA = dateA !== '-' ? new Date(dateA).getTime() : 0;
+        const timeB = dateB !== '-' ? new Date(dateB).getTime() : 0;
+        return (isNaN(timeB) ? 0 : timeB) - (isNaN(timeA) ? 0 : timeA);
       });
       
       tbody.innerHTML = filtered.map(item => {
