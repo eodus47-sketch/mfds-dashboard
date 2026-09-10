@@ -11,73 +11,76 @@
     .card-shadow { box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03); }
   </style>
 </head>
+<!-- 전체 가로 넓이 제한 해제 및 패딩 확보 -->
 <body class="text-slate-800 min-h-screen p-4 md:p-8">
 
-  <div class="max-w-7xl mx-auto space-y-6">
-    <div class="flex items-center text-xs text-slate-500 space-x-2 font-medium tracking-wide">
+  <!-- max-w 해제, w-full 적용으로 화면 꽉 차게 -->
+  <div class="w-full mx-auto space-y-6">
+    <div class="flex items-center text-sm text-slate-500 space-x-2 font-medium tracking-wide">
       <span>식약처 모니터링 시스템</span><span>•</span><span>매일 06:00 자동 수집</span><span>•</span>
       <span>마지막 업데이트 <span id="lastUpdateTime" class="text-slate-700">확인 중...</span></span>
     </div>
 
-    <!-- 네비게이션 탭 -->
-    <div class="flex border-b border-slate-200 mt-2 space-x-6 text-base font-bold">
-      <button id="tabSanctions" onclick="switchTab('sanctions')" class="pb-3 border-b-2 border-blue-600 text-blue-600 transition">📊 의약품 행정처분</button>
-      <button id="tabSafeLetters" onclick="switchTab('safeLetters')" class="pb-3 border-b-2 border-transparent text-slate-500 hover:text-slate-800 transition">📢 의약품 안전성 서한</button>
+    <!-- 네비게이션 탭 (글자 크기 확대) -->
+    <div class="flex border-b border-slate-200 mt-2 space-x-8 text-lg font-bold">
+      <button id="tabSanctions" onclick="switchTab('sanctions')" class="pb-3 border-b-4 border-blue-600 text-blue-600 transition">📊 의약품 행정처분</button>
+      <button id="tabSafeLetters" onclick="switchTab('safeLetters')" class="pb-3 border-b-4 border-transparent text-slate-500 hover:text-slate-800 transition">📢 의약품 안전성 서한</button>
     </div>
 
     <!-- ==================== 행정처분 화면 ==================== -->
     <div id="viewSanctions" class="space-y-6">
-      <div class="bg-white rounded-xl p-3 flex flex-wrap items-center justify-between card-shadow border border-slate-100">
-        <button class="px-4 py-1.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-full text-sm font-bold">
+      <div class="bg-white rounded-xl p-4 flex flex-wrap items-center justify-between card-shadow border border-slate-100">
+        <button class="px-5 py-2 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-full text-base font-bold">
           전체 수집 <span id="badgeTotal">0</span>
         </button>
-        <button onclick="location.reload()" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 rounded-lg text-sm font-medium transition">↻ 새로고침</button>
+        <button onclick="location.reload()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 rounded-lg text-base font-medium transition">↻ 새로고침</button>
       </div>
 
-      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div class="bg-white p-6 rounded-xl card-shadow border border-slate-100 lg:col-span-1 flex flex-col">
-          <h2 class="text-lg font-bold mb-1">처분 유형 구성</h2>
-          <div class="relative flex-grow flex items-center justify-center min-h-[250px]">
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div class="bg-white p-8 rounded-xl card-shadow border border-slate-100 lg:col-span-1 flex flex-col">
+          <h2 class="text-xl font-bold mb-2">처분 유형 구성</h2>
+          <div class="relative flex-grow flex items-center justify-center min-h-[300px]">
             <canvas id="typeDonutChart"></canvas>
             <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none mt-2">
-              <span class="text-3xl font-black text-slate-700" id="donutCenterTotal">0</span>
-              <span class="text-xs text-slate-500 font-medium mt-1">총 처분</span>
+              <span class="text-4xl font-black text-slate-700" id="donutCenterTotal">0</span>
+              <span class="text-sm text-slate-500 font-medium mt-1">총 처분</span>
             </div>
           </div>
         </div>
 
-        <div class="bg-white p-6 rounded-xl card-shadow border border-slate-100 lg:col-span-2 flex flex-col">
-          <h2 class="text-lg font-bold mb-1">연도별 처분 건수</h2>
-          <div class="flex-grow min-h-[250px]">
+        <div class="bg-white p-8 rounded-xl card-shadow border border-slate-100 lg:col-span-2 flex flex-col">
+          <h2 class="text-xl font-bold mb-2">연도별 처분 건수</h2>
+          <div class="flex-grow min-h-[300px]">
             <canvas id="yearBarChart"></canvas>
           </div>
         </div>
       </div>
 
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div class="bg-white p-5 rounded-xl card-shadow border border-slate-100">
-          <div class="text-sm text-slate-500 font-semibold mb-2">📊 전체 처분</div><div class="text-3xl font-black text-slate-800" id="cardTotal">0건</div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div class="bg-white p-6 rounded-xl card-shadow border border-slate-100">
+          <div class="text-base text-slate-500 font-semibold mb-2">📊 전체 처분</div><div class="text-4xl font-black text-slate-800" id="cardTotal">0건</div>
         </div>
-        <div class="bg-white p-5 rounded-xl card-shadow border border-slate-100">
-          <div class="text-sm text-emerald-600 font-semibold mb-2">📅 올해 처분</div><div class="text-3xl font-black text-slate-800" id="cardThisYear">0건</div>
+        <div class="bg-white p-6 rounded-xl card-shadow border border-slate-100">
+          <div class="text-base text-emerald-600 font-semibold mb-2">📅 올해 처분</div><div class="text-4xl font-black text-slate-800" id="cardThisYear">0건</div>
         </div>
-        <div class="bg-white p-5 rounded-xl card-shadow border border-rose-50 border-t-4 border-t-rose-400">
-          <div class="text-sm text-rose-500 font-semibold mb-2">❌ 허가취소</div><div class="text-3xl font-black text-slate-800" id="cardCancel">0건</div>
+        <div class="bg-white p-6 rounded-xl card-shadow border border-rose-50 border-t-4 border-t-rose-400">
+          <div class="text-base text-rose-500 font-semibold mb-2">❌ 허가취소</div><div class="text-4xl font-black text-slate-800" id="cardCancel">0건</div>
         </div>
-        <div class="bg-white p-5 rounded-xl card-shadow border border-amber-50 border-t-4 border-t-amber-400">
-          <div class="text-sm text-amber-600 font-semibold mb-2">⏸️ 업무정지</div><div class="text-3xl font-black text-slate-800" id="cardSuspend">0건</div>
+        <div class="bg-white p-6 rounded-xl card-shadow border border-amber-50 border-t-4 border-t-amber-400">
+          <div class="text-base text-amber-600 font-semibold mb-2">⏸️ 업무정지</div><div class="text-4xl font-black text-slate-800" id="cardSuspend">0건</div>
         </div>
       </div>
 
+      <!-- 행정처분 테이블 사이즈 확대 -->
       <div class="bg-white rounded-xl border border-slate-200 card-shadow overflow-hidden mt-8">
-        <div class="p-4 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
-          <h3 class="font-bold text-slate-700">상세 처분 목록</h3>
-          <input type="text" id="searchSanctions" onkeyup="renderSanctionsTable()" placeholder="검색어 입력..." class="px-3 py-1.5 border rounded-lg text-sm w-64 focus:outline-none">
+        <div class="p-5 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
+          <h3 class="text-lg font-bold text-slate-700">상세 처분 목록</h3>
+          <input type="text" id="searchSanctions" onkeyup="renderSanctionsTable()" placeholder="검색어 입력..." class="px-4 py-2 border rounded-lg text-base w-80 focus:outline-none">
         </div>
-        <div class="overflow-x-auto h-[600px] overflow-y-auto">
-          <table class="w-full text-left border-collapse text-sm">
-            <thead class="bg-white text-slate-500 text-xs uppercase font-semibold sticky top-0 shadow-sm">
-              <tr><th class="p-4 whitespace-nowrap">처분일자</th><th class="p-4 whitespace-nowrap">업체명</th><th class="p-4 w-1/4">제품명</th><th class="p-4 w-1/2">처분/위반 내용</th></tr>
+        <div class="overflow-x-auto h-[800px] overflow-y-auto">
+          <table class="w-full text-left border-collapse text-base">
+            <thead class="bg-white text-slate-600 text-sm uppercase font-bold sticky top-0 shadow-sm">
+              <tr><th class="p-5 whitespace-nowrap">처분일자</th><th class="p-5 whitespace-nowrap">업체명</th><th class="p-5 w-1/4">제품명</th><th class="p-5 w-1/2">처분/위반 내용</th></tr>
             </thead>
             <tbody id="sanctionsBody" class="divide-y divide-slate-100"></tbody>
           </table>
@@ -87,22 +90,22 @@
 
     <!-- ==================== 안전성서한 화면 ==================== -->
     <div id="viewSafeLetters" class="hidden space-y-6">
-      <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between mt-4">
+      <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between mt-4">
         <div>
-          <span class="text-xs font-semibold text-blue-500 uppercase tracking-wider">최근 수집된 안전성서한</span>
-          <div class="text-2xl font-bold mt-1" id="countSafeLetters">0건</div>
+          <span class="text-sm font-semibold text-blue-500 uppercase tracking-wider">최근 수집된 안전성서한</span>
+          <div class="text-3xl font-bold mt-2" id="countSafeLetters">0건</div>
         </div>
-        <div class="w-12 h-12 bg-blue-50 text-blue-600 rounded-lg flex items-center justify-center font-bold text-xl">📢</div>
+        <div class="w-14 h-14 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center font-bold text-2xl">📢</div>
       </div>
       <div class="bg-white rounded-xl border border-slate-200 card-shadow overflow-hidden">
-        <div class="p-4 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
-          <h3 class="font-bold text-slate-700">안전성 서한 목록</h3>
-          <input type="text" id="searchLetters" onkeyup="renderLettersTable()" placeholder="검색어 입력..." class="px-3 py-1.5 border rounded-lg text-sm w-64 focus:outline-none">
+        <div class="p-5 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
+          <h3 class="text-lg font-bold text-slate-700">안전성 서한 목록</h3>
+          <input type="text" id="searchLetters" onkeyup="renderLettersTable()" placeholder="검색어 입력..." class="px-4 py-2 border rounded-lg text-base w-80 focus:outline-none">
         </div>
-        <div class="overflow-x-auto h-[600px] overflow-y-auto">
-          <table class="w-full text-left border-collapse text-sm">
-            <thead class="bg-white text-slate-500 text-xs uppercase font-semibold sticky top-0 shadow-sm">
-              <tr><th class="p-4 whitespace-nowrap">배포일자</th><th class="p-4 w-1/3">서한 제목</th><th class="p-4">대상 성분</th><th class="p-4 w-1/3">주요 내용</th></tr>
+        <div class="overflow-x-auto h-[800px] overflow-y-auto">
+          <table class="w-full text-left border-collapse text-base">
+            <thead class="bg-white text-slate-600 text-sm uppercase font-bold sticky top-0 shadow-sm">
+              <tr><th class="p-5 whitespace-nowrap">배포일자</th><th class="p-5 w-1/3">서한 제목</th><th class="p-5">대상 성분</th><th class="p-5 w-1/3">주요 내용</th></tr>
             </thead>
             <tbody id="safeLettersBody" class="divide-y divide-slate-100"></tbody>
           </table>
@@ -117,23 +120,39 @@
     let donutChartInstance = null;
     let barChartInstance = null;
 
-    // 강제 추출(Fail-Safe) 로직이 포함된 매핑 함수
-    function getVal(item, keys, isContent = false) {
+    // 날짜 강제 추출 정규식 로직 추가 (ISPE GAMP 5 파싱 기준)
+    function extractDateFallback(item) {
       const upperItem = {};
       for (let k in item) { if (item.hasOwnProperty(k)) upperItem[k.toUpperCase()] = item[k]; }
       
+      for (let key of ['ADM_DISPO_YMD', 'DISP_DT', 'EXCPT_NOTIC_DT', 'DISPO_DT', 'YMD']) {
+        let val = upperItem[key];
+        if (val) return val;
+      }
+      
+      // 약속된 Key가 없으면 전체 텍스트에서 2000년대 8자리 날짜 포맷 강제 스캔
+      const jsonStr = JSON.stringify(item);
+      const match = jsonStr.match(/(20[1-2]\d)([0-1]\d)([0-3]\d)/);
+      if (match) return `${match[1]}-${match[2]}-${match[3]}`;
+      return '-';
+    }
+
+    function getVal(item, keys, isContent = false) {
+      const upperItem = {};
+      for (let k in item) { if (item.hasOwnProperty(k)) upperItem[k.toUpperCase()] = item[k]; }
       for (let key of keys) {
         let val = upperItem[key.toUpperCase()];
         if (val !== undefined && val !== null && val !== "") return val;
       }
       
-      // 약속된 키를 못 찾았을 때, 처분내용 칸에는 남는 모든 텍스트를 때려넣어 보여줌
       if (isContent) {
         let fallback = [];
         for (let k in upperItem) {
           if (!['ENTP_NAME', 'ENTRPS_NM', 'ITEM_NAME', 'PRDLST_NM'].includes(k)) {
-            if (typeof upperItem[k] === 'string' && upperItem[k].length > 2) {
-              fallback.push(upperItem[k]);
+            let valStr = String(upperItem[k]);
+            // 단순 일련번호(숫자)는 내용에서 제외하고 텍스트만 추출
+            if (valStr.length > 5 && !/^\d+$/.test(valStr)) {
+              fallback.push(valStr);
             }
           }
         }
@@ -182,15 +201,13 @@
       const currentYear = new Date().getFullYear().toString();
 
       rawSanctions.forEach(item => {
-        // 날짜 필드가 뭐로 오든 다 잡아내기 위한 강력한 배열
-        const dateStr = getVal(item, ['ADM_DISPO_YMD', 'DISP_DT', 'EXCPT_NOTIC_DT', 'DISPO_DT', 'YMD']);
-        // 내용 필드는 강제 추출 모드(true) 켬
+        // 새로 적용된 강력한 날짜 추출기 사용
+        const dateStr = extractDateFallback(item);
         const contentStr = getVal(item, ['VIOLT_CN', 'LAW_DSCR', 'ADM_DISPO_CTNT', 'DISP_CN', 'EXCPT_SUB_TEXT'], true);
         
         const type = categorize(contentStr);
         typeCounts[type]++;
 
-        // YYYY-MM-DD 형태나 YYYYMMDD 형태에서 연도만 추출
         let year = "알수없음";
         let cleanDate = dateStr.replace(/[^0-9]/g, '');
         if(cleanDate.length >= 4) year = cleanDate.substring(0, 4);
@@ -215,12 +232,12 @@
           labels: Object.keys(typeCounts),
           datasets: [{ data: Object.values(typeCounts), backgroundColor: Object.keys(typeCounts).map(k => colors[k]), borderWidth: 0, cutout: '75%' }]
         },
-        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right' } } }
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { font: { size: 14 } } } } }
       });
 
       const years = Object.keys(yearTypeCounts).filter(y => y !== "알수없음").sort().reverse();
       const barDatasets = Object.keys(colors).map(type => {
-        return { label: type, data: years.map(y => yearTypeCounts[y][type]), backgroundColor: colors[type], barThickness: 16, borderRadius: 4 };
+        return { label: type, data: years.map(y => yearTypeCounts[y][type]), backgroundColor: colors[type], barThickness: 24, borderRadius: 4 };
       });
 
       const barCtx = document.getElementById('yearBarChart').getContext('2d');
@@ -228,7 +245,7 @@
       barChartInstance = new Chart(barCtx, {
         type: 'bar',
         data: { labels: years.map(y => `${y}년`), datasets: barDatasets },
-        options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, scales: { x: { stacked: true }, y: { stacked: true } } }
+        options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, scales: { x: { stacked: true }, y: { stacked: true } }, plugins: { legend: { labels: { font: { size: 14 } } } } }
       });
     }
 
@@ -238,16 +255,16 @@
       const filtered = rawSanctions.filter(i => JSON.stringify(i).toLowerCase().includes(q));
       
       tbody.innerHTML = filtered.map(item => {
-        const dateStr = getVal(item, ['ADM_DISPO_YMD', 'DISP_DT', 'EXCPT_NOTIC_DT', 'DISPO_DT']);
+        const dateStr = extractDateFallback(item);
         const contentStr = getVal(item, ['VIOLT_CN', 'LAW_DSCR', 'ADM_DISPO_CTNT', 'DISP_CN', 'EXCPT_SUB_TEXT'], true);
         return `
         <tr class="hover:bg-slate-50 transition">
-          <td class="p-4 text-slate-500 font-mono text-xs whitespace-nowrap align-top">${dateStr}</td>
-          <td class="p-4 font-semibold text-slate-800 whitespace-normal break-words align-top">${getVal(item, ['ENTP_NAME', 'ENTRPS_NM'])}</td>
-          <td class="p-4 text-slate-700 whitespace-normal break-words align-top">${getVal(item, ['ITEM_NAME', 'PRDLST_NM'])}</td>
-          <td class="p-4 text-rose-600 font-medium whitespace-normal break-words align-top">${contentStr}</td>
+          <td class="p-5 text-slate-500 font-mono text-sm whitespace-nowrap align-top">${dateStr}</td>
+          <td class="p-5 font-bold text-slate-800 whitespace-normal break-words align-top">${getVal(item, ['ENTP_NAME', 'ENTRPS_NM'])}</td>
+          <td class="p-5 text-slate-700 whitespace-normal break-words align-top leading-relaxed">${getVal(item, ['ITEM_NAME', 'PRDLST_NM'])}</td>
+          <td class="p-5 text-rose-600 font-medium whitespace-normal break-words align-top leading-relaxed">${contentStr}</td>
         </tr>
-      `}).join('') || `<tr><td colspan="4" class="p-8 text-center text-slate-400">조회된 내역이 없습니다.</td></tr>`;
+      `}).join('') || `<tr><td colspan="4" class="p-10 text-center text-slate-400">조회된 내역이 없습니다.</td></tr>`;
     }
 
     function renderLettersTable() {
@@ -255,21 +272,23 @@
       const tbody = document.getElementById('safeLettersBody');
       const filtered = rawSafeLetters.filter(i => JSON.stringify(i).toLowerCase().includes(q));
       
-      tbody.innerHTML = filtered.map(item => `
+      tbody.innerHTML = filtered.map(item => {
+        const dateStr = extractDateFallback(item);
+        return `
         <tr class="hover:bg-slate-50 transition">
-          <td class="p-4 text-slate-500 font-mono text-xs whitespace-nowrap align-top">${getVal(item, ['PBLNT_DATE', 'NOTICE_DATE'])}</td>
-          <td class="p-4 font-semibold text-slate-800 whitespace-normal break-words align-top">${getVal(item, ['TITLE', 'LETTER_TITLE'])}</td>
-          <td class="p-4 text-blue-600 font-medium whitespace-normal break-words align-top">${getVal(item, ['TARGET_INGR_KOR_NM', 'INGR_KOR_NAME'])}</td>
-          <td class="p-4 text-slate-500 text-xs whitespace-normal break-words align-top">${getVal(item, ['MAIN_CN', 'LETTER_CONTENT'], true)}</td>
+          <td class="p-5 text-slate-500 font-mono text-sm whitespace-nowrap align-top">${dateStr}</td>
+          <td class="p-5 font-bold text-slate-800 whitespace-normal break-words align-top">${getVal(item, ['TITLE', 'LETTER_TITLE'])}</td>
+          <td class="p-5 text-blue-600 font-medium whitespace-normal break-words align-top leading-relaxed">${getVal(item, ['TARGET_INGR_KOR_NM', 'INGR_KOR_NAME'])}</td>
+          <td class="p-5 text-slate-500 whitespace-normal break-words align-top leading-relaxed">${getVal(item, ['MAIN_CN', 'LETTER_CONTENT'], true)}</td>
         </tr>
-      `).join('') || `<tr><td colspan="4" class="p-8 text-center text-slate-400">조회된 내역이 없습니다.</td></tr>`;
+      `}).join('') || `<tr><td colspan="4" class="p-10 text-center text-slate-400">조회된 내역이 없습니다.</td></tr>`;
     }
 
     function switchTab(tab) {
       document.getElementById('viewSanctions').classList.toggle('hidden', tab !== 'sanctions');
       document.getElementById('viewSafeLetters').classList.toggle('hidden', tab !== 'safeLetters');
-      document.getElementById('tabSanctions').className = tab === 'sanctions' ? "pb-3 border-b-2 border-blue-600 text-blue-600 font-bold" : "pb-3 border-b-2 border-transparent text-slate-500 hover:text-slate-800";
-      document.getElementById('tabSafeLetters').className = tab === 'safeLetters' ? "pb-3 border-b-2 border-blue-600 text-blue-600 font-bold" : "pb-3 border-b-2 border-transparent text-slate-500 hover:text-slate-800";
+      document.getElementById('tabSanctions').className = tab === 'sanctions' ? "pb-3 border-b-4 border-blue-600 text-blue-600 font-bold transition" : "pb-3 border-b-4 border-transparent text-slate-500 hover:text-slate-800 transition";
+      document.getElementById('tabSafeLetters').className = tab === 'safeLetters' ? "pb-3 border-b-4 border-blue-600 text-blue-600 font-bold transition" : "pb-3 border-b-4 border-transparent text-slate-500 hover:text-slate-800 transition";
     }
 
     window.onload = loadData;
