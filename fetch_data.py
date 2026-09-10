@@ -17,7 +17,7 @@ def fetch_data(url, key_name):
         "serviceKey": API_KEY,
         "type": "json",
         "pageNo": "1",
-        "numOfRows": "100"
+        "numOfRows": "1000"
     }
     
     try:
