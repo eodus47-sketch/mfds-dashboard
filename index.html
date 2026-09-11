@@ -124,26 +124,47 @@
     let donutChartInstance = null;
     let barChartInstance = null;
 
+    // 🚀 핵심 수정 구간: 미래 날짜(유통기한) 및 위반내용 텍스트 필터링 강화
     function extractDateFallback(item) {
       const upperItem = {};
       for (let k in item) { if (item.hasOwnProperty(k)) upperItem[k.toUpperCase()] = item[k]; }
+      
+      // 1. 지정된 날짜 전용 필드에서 먼저 정확히 찾기
       for (let key of ['ADM_DISPO_YMD', 'DISP_DT', 'EXCPT_NOTIC_DT', 'DISPO_DT', 'YMD', 'PBLNT_DATE', 'NOTICE_DATE']) {
         let val = upperItem[key];
-        if (val) return val;
+        if (val) {
+          let cleanVal = String(val).replace(/[^0-9]/g, '');
+          if(cleanVal.length >= 8) return `${cleanVal.substring(0,4)}-${cleanVal.substring(4,6)}-${cleanVal.substring(6,8)}`;
+          return val;
+        }
       }
-      const jsonStr = JSON.stringify(item);
-      const match = jsonStr.match(/(20[1-2]\d)[-./\s]?(0[1-9]|1[0-2])[-./\s]?(0[1-9]|[1-2]\d|3[0-1])/);
-      if (match) return `${match[1]}-${match[2]}-${match[3]}`;
+      
+      // 2. 만약 못 찾았다면 다른 필드에서 찾되, 위반내용(유통기한 포함 영역)은 스캔 방지 및 미래 연도 무시
+      const currentYear = new Date().getFullYear();
+      for (let k in upperItem) {
+        if (!['VIOLT_CN', 'LAW_DSCR', 'ADM_DISPO_CTNT', 'DISP_CN', 'EXCPT_SUB_TEXT', 'MAIN_CN', 'LETTER_CONTENT'].includes(k)) {
+          const match = String(upperItem[k]).match(/(20[1-2]\d)[-./\s]?(0[1-9]|1[0-2])[-./\s]?(0[1-9]|[1-2]\d|3[0-1])/);
+          if (match) {
+            let year = parseInt(match[1]);
+            // 현재 연도(2026) 이하의 정상적인 과거 데이터만 날짜로 인정
+            if (year <= currentYear) {
+                return `${match[1]}-${match[2]}-${match[3]}`;
+            }
+          }
+        }
+      }
       return '-';
     }
 
     function getVal(item, keys, isContent = false) {
       const upperItem = {};
       for (let k in item) { if (item.hasOwnProperty(k)) upperItem[k.toUpperCase()] = item[k]; }
+      
       for (let key of keys) {
         let val = upperItem[key.toUpperCase()];
         if (val !== undefined && val !== null && val !== "") return val;
       }
+      
       if (isContent) {
         let fallback = [];
         const extractedDate = extractDateFallback(item);
@@ -188,9 +209,7 @@
 
     async function loadData() {
       try {
-        // 🚀 핵심 수정 구간: 파일 주소 뒤에 시간을 붙여서 브라우저 캐시 무력화 (Cache-Busting)
         const cacheBuster = new Date().getTime(); 
-        
         const [resS, resL] = await Promise.all([
           fetch(`data/sanctions.json?t=${cacheBuster}`).then(r => r.ok ? r.json() : []),
           fetch(`data/safe_letters.json?t=${cacheBuster}`).then(r => r.ok ? r.json() : [])
