@@ -54,6 +54,7 @@
         </div>
       </div>
 
+      <!-- 요약 카드 6칸 -->
       <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
         <div onclick="setFilter('')" class="bg-white p-5 rounded-xl card-shadow border border-slate-100 clickable-card">
           <div class="text-sm text-slate-500 font-bold mb-1">📊 전체 처분</div><div class="text-3xl font-black text-slate-800" id="cardTotal">0</div>
@@ -126,12 +127,10 @@
     function extractDateFallback(item) {
       const upperItem = {};
       for (let k in item) { if (item.hasOwnProperty(k)) upperItem[k.toUpperCase()] = item[k]; }
-      
       for (let key of ['ADM_DISPO_YMD', 'DISP_DT', 'EXCPT_NOTIC_DT', 'DISPO_DT', 'YMD', 'PBLNT_DATE', 'NOTICE_DATE']) {
         let val = upperItem[key];
         if (val) return val;
       }
-      
       const jsonStr = JSON.stringify(item);
       const match = jsonStr.match(/(20[1-2]\d)[-./\s]?(0[1-9]|1[0-2])[-./\s]?(0[1-9]|[1-2]\d|3[0-1])/);
       if (match) return `${match[1]}-${match[2]}-${match[3]}`;
@@ -141,12 +140,10 @@
     function getVal(item, keys, isContent = false) {
       const upperItem = {};
       for (let k in item) { if (item.hasOwnProperty(k)) upperItem[k.toUpperCase()] = item[k]; }
-      
       for (let key of keys) {
         let val = upperItem[key.toUpperCase()];
         if (val !== undefined && val !== null && val !== "") return val;
       }
-      
       if (isContent) {
         let fallback = [];
         const extractedDate = extractDateFallback(item);
@@ -191,25 +188,15 @@
 
     async function loadData() {
       try {
+        // 🚀 핵심 수정 구간: 파일 주소 뒤에 시간을 붙여서 브라우저 캐시 무력화 (Cache-Busting)
+        const cacheBuster = new Date().getTime(); 
+        
         const [resS, resL] = await Promise.all([
-          fetch('data/sanctions.json').then(r => r.ok ? r.json() : []),
-          fetch('data/safe_letters.json').then(r => r.ok ? r.json() : [])
+          fetch(`data/sanctions.json?t=${cacheBuster}`).then(r => r.ok ? r.json() : []),
+          fetch(`data/safe_letters.json?t=${cacheBuster}`).then(r => r.ok ? r.json() : [])
         ]);
         
-        let fetchedSanctions = Array.isArray(resS) ? resS : [];
-        
-        // 🚀 핵심: 화장품법 관련 데이터 원천 차단 필터링 로직
-        rawSanctions = fetchedSanctions.filter(item => {
-          const contentStr = getVal(item, ['VIOLT_CN', 'LAW_DSCR', 'ADM_DISPO_CTNT', 'DISP_CN', 'EXCPT_SUB_TEXT'], true);
-          const productName = getVal(item, ['ITEM_NAME', 'PRDLST_NM']);
-          
-          // 위반 내용이나 제품명에 '화장품' 글자가 포함되어 있으면 버림(false)
-          if (contentStr.includes('화장품') || productName.includes('화장품')) {
-            return false;
-          }
-          return true;
-        });
-
+        rawSanctions = Array.isArray(resS) ? resS : [];
         rawSafeLetters = Array.isArray(resL) ? resL : [];
 
         const now = new Date();
